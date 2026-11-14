@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="googlebot" content="noindex, nofollow">
+  <title>Private Terminal — Restricted Access</title>
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: #06090e;
+      --surface-card: #0d121d;
+      --surface-elevated: #131b2a;
+      --surface-subtle: #192438;
+      --border-subtle: rgba(245, 158, 11, 0.18);
+      --border-strong: rgba(245, 158, 11, 0.45);
+      --gold-primary: #f59e0b;
+      --gold-light: #fbbf24;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --emerald-glow: rgba(16, 185, 129, 0.25);
+      --text-main: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+    }
+
+    html.light {
+      --bg-base: #f8fafc;
+      --surface-card: #ffffff;
+      --surface-elevated: #f1f5f9;
+      --surface-subtle: #e2e8f0;
+      --border-subtle: rgba(180, 83, 9, 0.22);
+      --border-strong: rgba(180, 83, 9, 0.5);
+      --gold-primary: #b45309;
+      --gold-light: #d97706;
+      --gold-glow: rgba(180, 83, 9, 0.15);
+      --emerald-glow: rgba(5, 150, 105, 0.15);
+      --text-main: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Prompt', 'Inter', -apple-system, sans-serif;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .exec-panel {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 1.25rem;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .exec-panel:hover {
+      border-color: var(--border-strong);
+    }
+
+    .surface-elevated {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+    }
+    .surface-subtle {
+      background: var(--surface-subtle);
+    }
+
+    .text-gold {
+      color: var(--gold-primary);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #06090e;
+      font-weight: 800;
+      box-shadow: 0 4px 14px var(--gold-glow);
+    }
+    .btn-gold:hover {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      box-shadow: 0 6px 18px var(--gold-glow);
+    }
+
+    .btn-surface {
+      background: var(--surface-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      transition: all 0.15s ease;
+    }
+    .btn-surface:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border-strong);
+      color: var(--gold-primary);
+    }
+
+    .input-exec {
+      background: var(--surface-card);
+      border: 1.5px solid var(--border-subtle);
+      color: var(--text-main);
+      transition: all 0.2s ease;
+    }
+    .input-exec:focus {
+      outline: none;
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    /* Shake Animation for Invalid PIN */
+    @keyframes shakeError {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-anim {
+      animation: shakeError 0.35s ease-in-out;
+    }
+
+    /* Custom Toast */
+    #toastContainer {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+    .toast-msg {
+      pointer-events: auto;
+      background: var(--surface-card);
+      border: 1px solid var(--gold-primary);
+      color: var(--text-main);
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      animation: slideInUp 0.25s ease-out forwards;
+    }
+    @keyframes slideInUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =================================================================== -->
+  <!-- PRIVATE VAULT PIN LOCK SCREEN (REQUIRED BEFORE VIEWING ANY CONTENT) -->
+  <!-- =================================================================== -->
+  <div id="vaultLockOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: radial-gradient(circle at center, #111827 0%, #06090e 100%);">
+    <div id="vaultLockCard" class="exec-panel w-full max-w-md p-7 sm:p-8 text-center space-y-6 border border-amber-500/30 shadow-2xl">
+      
+      <!-- Icon Badge -->
+      <div class="mx-auto w-16 h-16 rounded-2xl btn-gold flex items-center justify-center text-2xl shadow-xl">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+
+      <!-- Heading -->
+      <div class="space-y-1.5">
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/15 text-gold border border-amber-500/30">
+          <i class="fa-solid fa-lock text-[9px]"></i>
+          <span>Private Link • Restricted</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight" style="color: var(--text-main);">
+          ระบบส่วนตัว (Private Access)
+        </h1>
+        <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+          ลิงก์นี้ถูกตั้งค่าเป็นส่วนตัว กรุณากรอกรหัสผ่าน 6 หลักเพื่อปลดล็อกเข้าใช้งาน
+        </p>
+      </div>
+
+      <!-- PIN Input Box -->
+      <form onsubmit="event.preventDefault(); submitVaultPin();" class="space-y-4">
+        <div class="relative">
+          <input type="password" id="vaultPinInput" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off" autofocus
+                 oninput="handlePinTyping(this)"
+                 class="input-exec w-full py-3.5 px-4 rounded-xl text-center font-extrabold text-2xl mono text-gold tracking-[0.5em] placeholder:tracking-[0.3em] placeholder:text-slate-600">
+        </div>
+
+        <div id="vaultPinError" class="text-xs font-bold text-rose-400 min-h-[1.25rem]"></div>
+
+        <button type="submit" class="w-full py-3.5 rounded-xl btn-gold text-sm font-extrabold flex items-center justify-center gap-2 transition active:scale-95 shadow-lg">
+          <i class="fa-solid fa-unlock-keyhole"></i>
+          <span>ปลดล็อกเข้าสู่ระบบ</span>
+        </button>
+      </form>
+
+      <div class="pt-3 border-t text-[11px] flex items-center justify-center gap-1.5" style="border-color: var(--border-subtle); color: var(--text-muted);">
+        <i class="fa-solid fa-eye-slash text-gold"></i>
+        <span>ป้องกันการค้นหาจากสาธารณะ • เฉพาะผู้มีลิงก์และรหัสผ่าน</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PROTECTED APPLICATION CONTENT (HIDDEN UNTIL UNLOCKED)               -->
+  <!-- =================================================================== -->
+  <div id="protectedAppWrapper" class="hidden flex-1 flex flex-col min-h-screen">
+
+    <!-- Top Executive Navbar -->
+    <header class="border-b sticky top-0 z-40 backdrop-blur-md" style="background: rgba(13, 18, 29, 0.85); border-color: var(--border-subtle);">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+        
+        <!-- Brand & Title -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl btn-gold flex items-center justify-center text-lg shadow-lg">
+            <i class="fa-solid fa-dragon"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-extrabold text-base sm:text-lg tracking-tight" style="color: var(--text-main);">
+                Dragon Adventures <span class="text-gold">2% Trade Tax</span>
+              </h1>
+              <span class="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-gold border border-amber-500/30">
+                🔒 Private 24/7
+              </span>
+            </div>
+            <p class="text-xs" style="color: var(--text-muted);">
+              โต๊ะคำนวณภาษีเทรดมังกร & ออกบิลลูกค้า (Order Desk)
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Controls: Rates Ticker, Sound, Theme & Lock -->
+        <div class="flex items-center gap-2 sm:gap-2.5">
+          <!-- Live Currency Pill -->
+          <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl surface-elevated text-xs mono">
+            <span class="text-emerald-400 font-bold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              เรทสด:
+            </span>
+            <span class="text-gold font-semibold" id="tickerPhp">₱1 ≈ 0.536฿</span>
+            <span class="text-slate-600">|</span>
+            <span class="text-sky-400 font-semibold" id="tickerIdr">1K ≈ 1.88฿</span>
+            <span class="text-slate-600">|</span>
+            <span class="text-indigo-400 font-semibold" id="tickerUsd">$1 ≈ 33.6฿</span>
+          </div>
+
+          <!-- Sound Button -->
+          <button onclick="toggleSound()" id="soundToggleBtn" class="btn-surface w-9 h-9 rounded-xl flex items-center justify-center text-xs" title="เปิด/ปิดเสียงเอฟเฟกต์">
+            <i class="fa-solid fa-volume-high"></i>
+          </button>
+
+          <!-- Theme Switcher -->
+          <button onclick="toggleTheme()" class="btn-surface w-9 h-9 rounded-xl flex items-center justify-center text-xs text-gold" title="สลับธีม สว่าง / มืด">
+            <i class="fa-solid fa-moon" id="themeIcon"></i>
+          </button>
+
+          <!-- Lock Screen Button -->
+          <button onclick="lockVault()" class="btn-surface px-3 h-9 rounded-xl flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 border-rose-500/30" title="ล็อกหน้าจอ">
+            <i class="fa-solid fa-lock"></i>
+            <span class="hidden sm:inline font-bold">ล็อก</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1 w-full space-y-6">
+
+      <!-- 1. DRAGON ADVENTURES 2% TRADE TAX & ORDER DESK -->
+      <div class="exec-panel p-5 sm:p-7">
+        
+        <!-- Panel Header with Payer Mode Switcher -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b" style="border-color: var(--border-subtle);">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl btn-gold flex items-center justify-center text-sm">
+                <i class="fa-solid fa-calculator"></i>
+              </span>
+              <h2 class="font-extrabold text-lg sm:text-xl" style="color: var(--text-main);">
+                โต๊ะคำนวณภาษีเทรดมังกร 2% & ออกบิลลูกค้า
+              </h2>
+            </div>
+            <p class="text-xs sm:text-sm mt-1" style="color: var(--text-muted);">
+              คำนวณยอดโอนในเกม Dragon Adventures ป้องกันขาดทุนจากภาษี 2% พร้อมออกบิลแชทได้ทันที
+            </p>
+          </div>
+
+          <!-- Tax Payer Switcher -->
+          <div class="flex items-center p-1 rounded-xl surface-elevated text-xs self-start md:self-auto">
+            <button onclick="setTaxMode('seller')" id="taxModeSeller" class="px-3.5 py-2 rounded-lg font-bold transition btn-gold">
+              🛡️ พ่อค้าออกภาษีให้ (ลูกค้ารับเต็ม)
+            </button>
+            <button onclick="setTaxMode('buyer')" id="taxModeBuyer" class="px-3.5 py-2 rounded-lg font-semibold transition" style="color: var(--text-secondary);">
+              📦 ลูกค้าออกภาษีเอง
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Columns Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Left Column: Input, Modes, Price Config & Bill Summary (5 Cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            
+            <!-- Order Coins Input Box -->
+            <div class="surface-elevated p-4 rounded-xl space-y-3">
+              
+              <!-- Mode Switcher: Millions (M) vs Exact Coins -->
+              <div>
+                <div class="text-[11px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--text-muted);">
+                  รูปแบบการใส่ยอดเหรียญ:
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl surface-subtle border" style="border-color: var(--border-subtle);">
+                  <button type="button" id="tradeModeBtnM" onclick="setTradeInputMode('M')"
+                          class="py-2 px-3 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 btn-gold">
+                    <span>⚡ หน่วย M (ล้าน)</span>
+                  </button>
+                  <button type="button" id="tradeModeBtnCoins" onclick="setTradeInputMode('COINS')"
+                          class="py-2 px-3 rounded-lg font-semibold text-xs transition flex items-center justify-center gap-1.5 opacity-70 hover:opacity-100"
+                          style="color: var(--text-secondary);">
+                    <span>🪙 เหรียญตรงตัว / ตัดเศษ</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Input Label -->
+              <div class="flex items-center justify-between pt-1">
+                <label id="tradeCoinsInputLabel" class="text-xs font-bold" style="color: var(--text-main);">
+                  🎯 จำนวนเหรียญที่ลูกค้าสั่งซื้อ (หน่วย M):
+                </label>
+                <button onclick="setCoinsQuick(90)" class="text-xs px-2 py-0.5 rounded surface-subtle hover:text-gold text-[11px] mono transition">
+                  ตัวอย่าง 90M
+                </button>
+              </div>
+
+              <!-- Input Box -->
+              <div>
+                <div class="relative">
+                  <input type="number" id="tradeCoinsInput" value="10" step="any" min="0" oninput="calculateTradeTax()"
+                         placeholder="เช่น 10 หรือ 90"
+                         class="input-exec w-full pl-4 pr-16 py-3 rounded-xl font-extrabold text-2xl mono text-gold">
+                  <span id="tradeCoinsUnitLabel" class="absolute right-4 top-1/2 -translate-y-1/2 font-extrabold text-base text-gold mono">M</span>
+                </div>
+                <div id="tradeCoinsEquivalentPreview" class="text-xs mono font-semibold mt-1.5 px-1" style="color: var(--text-muted);">
+                  <span>= </span><b class="text-gold">10,000,000</b><span> Coins (10 M)</span>
+                </div>
+              </div>
+
+              <!-- Quick Add M Buttons -->
+              <div id="quickButtonsM">
+                <div class="text-xs mb-1.5" style="color: var(--text-muted);">ปุ่มลัดเพิ่มจำนวนเหรียญ (หน่วย M):</div>
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 text-xs font-bold mono">
+                  <button type="button" onclick="addCoinsM(1)" class="btn-surface py-1.5 rounded-lg active:scale-95">+1M</button>
+                  <button type="button" onclick="addCoinsM(5)" class="btn-surface py-1.5 rounded-lg active:scale-95">+5M</button>
+                  <button type="button" onclick="addCoinsM(10)" class="btn-surface py-1.5 rounded-lg active:scale-95">+10M</button>
+                  <button type="button" onclick="addCoinsM(20)" class="btn-surface py-1.5 rounded-lg active:scale-95">+20M</button>
+                  <button type="button" onclick="addCoinsM(50)" class="btn-surface py-1.5 rounded-lg active:scale-95">+50M</button>
+                  <button type="button" onclick="addCoinsM(100)" class="btn-surface py-1.5 rounded-lg active:scale-95">+100M</button>
+                  <button type="button" onclick="setCoinsQuick(0)" class="py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 transition active:scale-95">C</button>
+                </div>
+              </div>
+
+              <!-- Quick Add Exact Coins Buttons -->
+              <div id="quickButtonsCoins" class="hidden">
+                <div class="text-xs mb-1.5" style="color: var(--text-muted);">ปุ่มลัดเพิ่มเหรียญตรงตัว:</div>
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 text-xs font-bold mono">
+                  <button type="button" onclick="addCoinsExact(100000)" class="btn-surface py-1.5 rounded-lg active:scale-95">+100K</button>
+                  <button type="button" onclick="addCoinsExact(500000)" class="btn-surface py-1.5 rounded-lg active:scale-95">+500K</button>
+                  <button type="button" onclick="addCoinsExact(1000000)" class="btn-surface py-1.5 rounded-lg active:scale-95">+1M</button>
+                  <button type="button" onclick="addCoinsExact(5000000)" class="btn-surface py-1.5 rounded-lg active:scale-95">+5M</button>
+                  <button type="button" onclick="addCoinsExact(10000000)" class="btn-surface py-1.5 rounded-lg active:scale-95">+10M</button>
+                  <button type="button" onclick="addCoinsExact(50000000)" class="btn-surface py-1.5 rounded-lg active:scale-95">+50M</button>
+                  <button type="button" onclick="setCoinsQuick(0)" class="py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 transition active:scale-95">C</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Price Config Setting Box -->
+            <div class="surface-elevated p-4 rounded-xl space-y-2.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold flex items-center gap-1.5" style="color: var(--text-main);">
+                  <i class="fa-solid fa-tags text-gold"></i>
+                  <span>ตั้งค่าเรทขายเหรียญ (ราคาต่อ 1M):</span>
+                </span>
+              </div>
+              
+              <div class="grid grid-cols-12 gap-2">
+                <div class="col-span-7">
+                  <input type="number" id="priceValueInput" value="15" step="any" min="0" oninput="saveAndRecalcPrice()"
+                         class="input-exec w-full px-3 py-2 rounded-lg font-bold text-sm mono">
+                </div>
+                <div class="col-span-5">
+                  <select id="priceCurrencySelect" onchange="saveAndRecalcPrice()"
+                          class="input-exec w-full px-2.5 py-2 rounded-lg font-bold text-xs mono">
+                    <option value="PHP">PHP (เปโซ)</option>
+                    <option value="THB">THB (บาทไทย)</option>
+                    <option value="IDR">IDR (รูเปียห์)</option>
+                    <option value="USD">USD (ดอลลาร์)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Quick Preset Chips -->
+              <div class="flex flex-wrap gap-1.5 pt-1 text-[11px] mono">
+                <button onclick="setPricePreset(15, 'PHP')" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">15 PHP</button>
+                <button onclick="setPricePreset(16, 'PHP')" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">16 PHP</button>
+                <button onclick="setPricePreset(8.5, 'THB')" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">8.5 THB</button>
+                <button onclick="setPricePreset(9, 'THB')" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">9 THB</button>
+                <button onclick="setPricePreset(4000, 'IDR')" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">4K IDR</button>
+              </div>
+            </div>
+
+            <!-- Customer Bill Pricing Summary Box -->
+            <div class="surface-elevated p-4 rounded-xl space-y-2.5 border border-emerald-500/25">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold" style="color: var(--text-secondary);">💵 ยอดเรียกเก็บเงินลูกค้า:</span>
+                <span class="px-2 py-0.5 rounded bg-amber-500/15 text-gold font-bold mono" id="billRatePerMTag">เรท 15 PHP / M</span>
+              </div>
+              <div class="flex items-baseline justify-between pt-1">
+                <span class="text-xs" style="color: var(--text-muted);">ยอดชำระสุทธิ:</span>
+                <div class="text-right">
+                  <div class="text-2xl font-extrabold text-gold mono" id="billForeignAmount">150.00 PHP</div>
+                  <div class="text-xs font-bold text-emerald-400 mono mt-0.5" id="billThbAmount">≈ 80.37 บาทไทย</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Formulas & Results Cards (7 Cols) -->
+          <div class="lg:col-span-7 space-y-4">
+
+            <!-- Formula 1: POPULAR +2% -->
+            <div class="surface-elevated p-5 rounded-xl border border-amber-500/25 space-y-3 relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" id="formula1Badge">
+                  POPULAR +2%
+                </span>
+                <span class="text-xs" style="color: var(--text-muted);">ยอดนิยม / เข้าใจง่าย</span>
+              </div>
+
+              <div class="text-xs font-bold" id="formula1Title" style="color: var(--text-secondary);">
+                สูตรมาตรฐานพ่อค้า (+2% ตรงตัว เช่น 10M โอน 10.2M)
+              </div>
+
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div>
+                  <div class="text-[11px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted);">
+                    ตัวเลขที่ต้องพิมพ์โอนในเกม:
+                  </div>
+                  <div class="text-3xl font-extrabold text-emerald-400 mono tracking-tight" id="resultAdd2Num">
+                    10,200,000
+                  </div>
+                </div>
+
+                <button onclick="copySingleNumber('resultAdd2Num', 'คัดลอกยอดโอนในเกมเรียบร้อยแล้ว')"
+                        class="px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-sm">
+                  <i class="fa-regular fa-copy"></i>
+                  <span>คัดลอกยอดโอน</span>
+                </button>
+              </div>
+
+              <div class="flex items-center gap-3 text-xs mono pt-2 border-t" style="border-color: var(--border-subtle); color: var(--text-muted);">
+                <span>หักภาษี 2%: <b class="text-rose-400" id="resultAdd2Tax">204,000</b></span>
+                <span>•</span>
+                <span>ลูกค้าได้รับจริง: <b class="text-slate-300" id="resultAdd2Net">9,996,000</b></span>
+              </div>
+            </div>
+
+            <!-- Formula 2: EXACT NET 100% -->
+            <div class="surface-elevated p-5 rounded-xl border border-amber-500/30 space-y-3 relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider bg-amber-500/20 text-gold border border-amber-500/30" id="formula2Badge">
+                  EXACT NET 100%
+                </span>
+                <span class="text-xs" style="color: var(--text-muted);">ลูกค้าได้ครบ 100% ไม่ขาดเศษ</span>
+              </div>
+
+              <div class="text-xs font-bold" id="formula2Title" style="color: var(--text-secondary);">
+                สูตรสุทธิเป๊ะ 100% (หาร 0.98 ลูกค้าได้ครบเป๊ะ)
+              </div>
+
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div>
+                  <div class="text-[11px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted);">
+                    ตัวเลขที่ต้องพิมพ์โอนในเกม:
+                  </div>
+                  <div class="text-3xl font-extrabold text-gold mono tracking-tight" id="resultNetExactNum">
+                    10,204,082
+                  </div>
+                </div>
+
+                <button onclick="copySingleNumber('resultNetExactNum', 'คัดลอกยอดสุทธิเป๊ะเรียบร้อยแล้ว')"
+                        class="px-4 py-2.5 rounded-xl btn-gold text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
+                  <i class="fa-regular fa-copy"></i>
+                  <span>คัดลอกยอดสุทธิ</span>
+                </button>
+              </div>
+
+              <div class="flex items-center gap-3 text-xs mono pt-2 border-t" style="border-color: var(--border-subtle); color: var(--text-muted);">
+                <span>หักภาษี 2%: <b class="text-rose-400" id="resultNetExactTax">204,082</b></span>
+                <span>•</span>
+                <span id="formula2NetLabel">ลูกค้าได้รับเต็มเป๊ะ: <b class="text-gold" id="resultNetExactNet">10,000,000</b></span>
+              </div>
+            </div>
+
+            <!-- Action Buttons: Generate & Copy Invoices -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <button onclick="copyBillMessage()" class="py-3 px-4 rounded-xl btn-gold text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition active:scale-95">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span>คัดลอกบิลภาษาไทย (ส่งแชทลูกค้า)</span>
+              </button>
+
+              <button onclick="copyBillMessageEN()" class="py-3 px-4 rounded-xl btn-surface text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition active:scale-95">
+                <i class="fa-brands fa-discord text-indigo-400"></i>
+                <span>Copy English Invoice (ส่งต่างชาติ)</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. LIVE 2-WAY CURRENCY CONVERTER & TAX GUIDE -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Live 2-Way Currency Converter -->
+        <div class="exec-panel p-5 sm:p-6 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b" style="border-color: var(--border-subtle);">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-money-bill-transfer"></i>
+              </span>
+              <h3 class="font-bold text-sm sm:text-base" style="color: var(--text-main);">
+                เครื่องแปลงค่าเงินสด 2 ทาง (Live Converter)
+              </h3>
+            </div>
+            <span class="text-[11px] mono text-emerald-400 font-semibold" id="convRateFormula">1 PHP ≈ 0.536 THB</span>
+          </div>
+
+          <div class="grid grid-cols-11 items-center gap-2">
+            <!-- From -->
+            <div class="col-span-5 space-y-1">
+              <label class="text-[11px] font-semibold" style="color: var(--text-muted);">จากสกุลเงิน:</label>
+              <div class="flex gap-1.5">
+                <select id="convCurrencyFrom" onchange="convertCurrencyLive('from')" class="input-exec px-2 py-2 rounded-lg font-bold text-xs mono w-20">
+                  <option value="PHP" selected>PHP</option>
+                  <option value="THB">THB</option>
+                  <option value="IDR">IDR</option>
+                  <option value="USD">USD</option>
+                </select>
+                <input type="number" id="convAmountFrom" value="100" step="any" oninput="convertCurrencyLive('from')"
+                       class="input-exec w-full px-2.5 py-2 rounded-lg font-bold text-sm mono text-gold">
+              </div>
+            </div>
+
+            <!-- Swap Button -->
+            <div class="col-span-1 flex justify-center pt-5">
+              <button onclick="swapConverterCurrencies()" class="w-8 h-8 rounded-full surface-elevated hover:text-gold flex items-center justify-center transition active:scale-90" title="สลับสกุลเงิน">
+                <i class="fa-solid fa-arrow-right-arrow-left text-xs"></i>
+              </button>
+            </div>
+
+            <!-- To -->
+            <div class="col-span-5 space-y-1">
+              <label class="text-[11px] font-semibold" style="color: var(--text-muted);">เป็นสกุลเงิน:</label>
+              <div class="flex gap-1.5">
+                <select id="convCurrencyTo" onchange="convertCurrencyLive('from')" class="input-exec px-2 py-2 rounded-lg font-bold text-xs mono w-20">
+                  <option value="THB" selected>THB</option>
+                  <option value="PHP">PHP</option>
+                  <option value="IDR">IDR</option>
+                  <option value="USD">USD</option>
+                </select>
+                <input type="number" id="convAmountTo" value="53.58" step="any" oninput="convertCurrencyLive('to')"
+                       class="input-exec w-full px-2.5 py-2 rounded-lg font-bold text-sm mono text-emerald-400">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dragon Adventures Tax Guide -->
+        <div class="exec-panel p-5 sm:p-6 space-y-3">
+          <div class="flex items-center gap-2 pb-3 border-b" style="border-color: var(--border-subtle);">
+            <span class="w-7 h-7 rounded-lg bg-amber-500/15 text-gold flex items-center justify-center text-xs">
+              <i class="fa-solid fa-circle-question"></i>
+            </span>
+            <h3 class="font-bold text-sm sm:text-base" style="color: var(--text-main);">
+              ทำความเข้าใจระบบภาษีเทรดมังกร 2%
+            </h3>
+          </div>
+
+          <div class="space-y-2 text-xs leading-relaxed" style="color: var(--text-secondary);">
+            <div class="p-2.5 rounded-lg surface-elevated">
+              <b class="text-emerald-400">1. สูตรยอดนิยม (+2%):</b> ตัวอย่าง ลูกค้าซื้อ 10M พ่อค้าโอน 10.2M ระบบเกมหัก 2% (204,000) ลูกค้าจะได้ 9.996M ขาดไปเพียง 4,000 เหรียญ สะดวกและคำนวณง่าย
+            </div>
+            <div class="p-2.5 rounded-lg surface-elevated">
+              <b class="text-gold">2. สูตรสุทธิเป๊ะ (หาร 0.98):</b> ลูกค้าต้องการ 10M ถ้วน พ่อค้าต้องโอน 10,204,082 เหรียญ เมื่อระบบเกมหัก 2% ลูกค้าจะได้รับครบ 10,000,000 เหรียญเป๊ะ 100% ไม่ขาดแม้แต่เศษเดียว
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t py-4 text-center text-xs" style="border-color: var(--border-subtle); color: var(--text-muted);">
+      <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5">
+          <i class="fa-solid fa-lock text-gold"></i>
+          <span>Private Encrypted Terminal • เฉพาะผู้มีลิงก์และรหัสผ่าน</span>
+        </div>
+        <div>
+          <span>24/7 Cloud Precision Engine</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer"></div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    // ===== Private Vault Authentication (Cyrb53 Salted Hash Verification) =====
+    const VAULT_EXPECTED_HASH = "364c64e65f49f34e";
+    const VAULT_STORAGE_KEY = "da_calc_vault_auth_v1";
+
+    function computePinHash(pin) {
+      const str = "DA_VAULT_2026_SALT::" + String(pin).trim() + "::SOVEREIGN";
+      let h1 = 0xdeadbeef ^ str.length, h2 = 0x41c6ce57 ^ str.length;
+      for (let i = 0, ch; i < str.length; i++) {
+        ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
+    }
+
+    function unlockVaultUI(playChime = false) {
+      document.getElementById("vaultLockOverlay").classList.add("hidden");
+      document.getElementById("protectedAppWrapper").classList.remove("hidden");
+      document.title = "Dragon Adventures 2% Trade Tax & Order Desk";
+      if (playChime) {
+        playSuccessChime();
+        showToast("ปลดล็อกเข้าสู่ระบบสำเร็จ 🔓");
+      }
+    }
+
+    function lockVault() {
+      localStorage.removeItem(VAULT_STORAGE_KEY);
+      document.getElementById("protectedAppWrapper").classList.add("hidden");
+      document.getElementById("vaultLockOverlay").classList.remove("hidden");
+      document.title = "Private Terminal — Restricted Access";
+      const input = document.getElementById("vaultPinInput");
+      const err = document.getElementById("vaultPinError");
+      if (err) err.textContent = "";
+      if (input) {
+        input.value = "";
+        setTimeout(() => input.focus(), 50);
+      }
+      playTone(380, "sine", 0.06);
+    }
+
+    function handlePinTyping(inputEl) {
+      const err = document.getElementById("vaultPinError");
+      if (err && err.textContent) err.textContent = "";
+      const val = inputEl.value.trim();
+      if (val.length === 6) {
+        if (computePinHash(val) === VAULT_EXPECTED_HASH) {
+          localStorage.setItem(VAULT_STORAGE_KEY, VAULT_EXPECTED_HASH);
+          inputEl.value = "";
+          unlockVaultUI(true);
+        }
+      }
+    }
+
+    function submitVaultPin() {
+      const inputEl = document.getElementById("vaultPinInput");
+      const errEl = document.getElementById("vaultPinError");
+      const cardEl = document.getElementById("vaultLockCard");
+      const val = (inputEl ? inputEl.value : "").trim();
+
+      if (computePinHash(val) === VAULT_EXPECTED_HASH) {
+        localStorage.setItem(VAULT_STORAGE_KEY, VAULT_EXPECTED_HASH);
+        if (inputEl) inputEl.value = "";
+        if (errEl) errEl.textContent = "";
+        unlockVaultUI(true);
+      } else {
+        if (errEl) errEl.textContent = "❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่";
+        if (inputEl) {
+          inputEl.value = "";
+          inputEl.focus();
+        }
+        if (cardEl) {
+          cardEl.classList.remove("shake-anim");
+          void cardEl.offsetWidth;
+          cardEl.classList.add("shake-anim");
+        }
+        playTone(220, "sawtooth", 0.12, 0.08);
+      }
+    }
+
+    function checkSavedVaultAuth() {
+      const saved = localStorage.getItem(VAULT_STORAGE_KEY);
+      if (saved === VAULT_EXPECTED_HASH) {
+        unlockVaultUI(false);
+      } else {
+        const input = document.getElementById("vaultPinInput");
+        if (input) setTimeout(() => input.focus(), 50);
+      }
+    }
+
+    // ===== Sound Synthesis (Web Audio API) =====
+    let soundEnabled = localStorage.getItem("da_sfx_enabled") !== "false";
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.08, vol = 0.1) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playSuccessChime() {
+      playTone(523.25, 'triangle', 0.06, 0.08);
+      setTimeout(() => playTone(659.25, 'triangle', 0.08, 0.08), 60);
+      setTimeout(() => playTone(783.99, 'sine', 0.12, 0.09), 120);
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem("da_sfx_enabled", soundEnabled);
+      updateSoundButtonUI();
+      if (soundEnabled) playSuccessChime();
+      showToast(soundEnabled ? "เปิดเสียงเอฟเฟกต์แล้ว 🔔" : "ปิดเสียงเอฟเฟกต์แล้ว 🔕");
+    }
+
+    function updateSoundButtonUI() {
+      const btn = document.getElementById("soundToggleBtn");
+      if (btn) {
+        btn.innerHTML = soundEnabled ? '<i class="fa-solid fa-volume-high"></i>' : '<i class="fa-solid fa-volume-xmark text-rose-400"></i>';
+      }
+    }
+
+    // ===== Theme Switcher =====
+    function initTheme() {
+      const saved = localStorage.getItem("da_theme") || "dark";
+      if (saved === "light") {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+        updateThemeIcon("light");
+      } else {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+        updateThemeIcon("dark");
+      }
+    }
+
+    function toggleTheme() {
+      const isLight = document.documentElement.classList.contains("light");
+      if (isLight) {
+        document.documentElement.classList.remove("light");
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("da_theme", "dark");
+        updateThemeIcon("dark");
+        showToast("เปิดโหมด Obsidian Gold (Dark)");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+        localStorage.setItem("da_theme", "light");
+        updateThemeIcon("light");
+        showToast("เปิดโหมด Ivory Private Bank (Light)");
+      }
+      playTone(600, 'sine', 0.05);
+    }
+
+    function updateThemeIcon(mode) {
+      const icon = document.getElementById("themeIcon");
+      if (icon) {
+        icon.className = mode === "light" ? "fa-solid fa-sun text-amber-500" : "fa-solid fa-moon text-gold";
+      }
+    }
+
+    // ===== Toast Notifications =====
+    function showToast(msg) {
+      const c = document.getElementById("toastContainer");
+      if (!c) return;
+      const t = document.createElement("div");
+      t.className = "toast-msg";
+      t.innerHTML = `<i class="fa-solid fa-circle-check text-gold"></i><span>${msg}</span>`;
+      c.appendChild(t);
+      setTimeout(() => {
+        t.style.opacity = "0";
+        t.style.transform = "translateY(10px)";
+        t.style.transition = "all 0.25s ease";
+        setTimeout(() => t.remove(), 250);
+      }, 2500);
+    }
+
+    // ===== Clipboard Helper =====
+    function writeClipboardText(text, successToast = "คัดลอกสำเร็จ") {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(successToast);
+          playSuccessChime();
+        }).catch(() => fallbackCopy(text, successToast));
+      } else {
+        fallbackCopy(text, successToast);
+      }
+    }
+
+    function fallbackCopy(text, successToast) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        showToast(successToast);
+        playSuccessChime();
+      } catch (e) {
+        showToast("ไม่สามารถคัดลอกได้");
+      }
+      document.body.removeChild(ta);
+    }
+
+    function copySingleNumber(elementId, toastMsg) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const rawText = el.textContent.replace(/,/g, '').trim();
+      writeClipboardText(rawText, toastMsg);
+    }
+
+    // ===== Live Currency Rates =====
+    let liveRates = {
+      THB: 1,
+      PHP: 1.866,
+      IDR: 532.55,
+      USD: 0.0297
+    };
+
+    async function fetchExchangeRates() {
+      try {
+        const res = await fetch("https://open.er-api.com/v6/latest/THB");
+        if (!res.ok) throw new Error("Rate fetch error");
+        const data = await res.json();
+        if (data && data.rates) {
+          liveRates = data.rates;
+          const phpToThb = 1 / (liveRates.PHP || 1.866);
+          const idrToThb = (1 / (liveRates.IDR || 532.55)) * 1000;
+          const usdToThb = 1 / (liveRates.USD || 0.0297);
+
+          const tPhp = document.getElementById("tickerPhp");
+          const tIdr = document.getElementById("tickerIdr");
+          const tUsd = document.getElementById("tickerUsd");
+          if (tPhp) tPhp.textContent = `₱1 ≈ ${phpToThb.toFixed(3)}฿`;
+          if (tIdr) tIdr.textContent = `1K ≈ ${idrToThb.toFixed(2)}฿`;
+          if (tUsd) tUsd.textContent = `$1 ≈ ${usdToThb.toFixed(2)}฿`;
+        }
+      } catch (e) {
+        console.warn("Using offline fallback rates:", e);
+      }
+      calculateTradeTax();
+      convertCurrencyLive('from');
+    }
+
+    function toTHB(amount, currency) {
+      if (currency === "THB") return amount;
+      const rate = liveRates[currency];
+      if (!rate) return amount;
+      return amount / rate;
+    }
+
+    function fromTHB(amountTHB, targetCurrency) {
+      if (targetCurrency === "THB") return amountTHB;
+      const rate = liveRates[targetCurrency];
+      if (!rate) return amountTHB;
+      return amountTHB * rate;
+    }
+
+    // ===== Trade Calculator State & Logic =====
+    let currentTaxMode = "seller"; // 'seller' or 'buyer'
+    let tradeInputMode = "M"; // 'M' or 'COINS'
+    let coinPriceConfig = { value: 15, currency: "PHP" };
+
+    function loadSavedPriceConfig() {
+      try {
+        const saved = localStorage.getItem("da_coin_price");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.value === 'number') {
+            coinPriceConfig = parsed;
+            document.getElementById("priceValueInput").value = coinPriceConfig.value;
+            document.getElementById("priceCurrencySelect").value = coinPriceConfig.currency;
+          }
+        }
+      } catch (e) {}
+    }
+
+    function saveAndRecalcPrice() {
+      const val = parseFloat(document.getElementById("priceValueInput").value) || 0;
+      const cur = document.getElementById("priceCurrencySelect").value;
+      coinPriceConfig = { value: val, currency: cur };
+      localStorage.setItem("da_coin_price", JSON.stringify(coinPriceConfig));
+      calculateTradeTax();
+    }
+
+    function setPricePreset(val, cur) {
+      document.getElementById("priceValueInput").value = val;
+      document.getElementById("priceCurrencySelect").value = cur;
+      saveAndRecalcPrice();
+      playTone(500, 'sine', 0.05);
+      showToast(`ปรับเรทราคาเป็น ${val} ${cur} / M เรียบร้อยแล้ว`);
+    }
+
+    function setTaxMode(mode) {
+      currentTaxMode = mode;
+      const btnSeller = document.getElementById("taxModeSeller");
+      const btnBuyer = document.getElementById("taxModeBuyer");
+      if (mode === "seller") {
+        btnSeller.className = "px-3.5 py-2 rounded-lg font-bold transition btn-gold";
+        btnBuyer.className = "px-3.5 py-2 rounded-lg font-semibold transition opacity-75 hover:opacity-100";
+      } else {
+        btnBuyer.className = "px-3.5 py-2 rounded-lg font-bold transition btn-gold";
+        btnSeller.className = "px-3.5 py-2 rounded-lg font-semibold transition opacity-75 hover:opacity-100";
+      }
+      playTone(480, 'sine', 0.04);
+      calculateTradeTax();
+    }
+
+    function setTradeInputMode(mode) {
+      if (tradeInputMode === mode) return;
+      const input = document.getElementById("tradeCoinsInput");
+      const currentVal = parseFloat(input.value) || 0;
+      tradeInputMode = mode;
+
+      const btnM = document.getElementById("tradeModeBtnM");
+      const btnCoins = document.getElementById("tradeModeBtnCoins");
+      const unitLabel = document.getElementById("tradeCoinsUnitLabel");
+      const inputLabel = document.getElementById("tradeCoinsInputLabel");
+      const quickM = document.getElementById("quickButtonsM");
+      const quickCoins = document.getElementById("quickButtonsCoins");
+
+      if (mode === "COINS") {
+        const converted = Math.round(currentVal * 1e6);
+        input.value = converted > 0 ? converted : 10000000;
+        input.step = "1000";
+        input.placeholder = "เช่น 5205300 หรือ 90000000";
+        if (unitLabel) unitLabel.textContent = "Coins";
+        if (inputLabel) inputLabel.textContent = "🎯 จำนวนเหรียญตรงตัวที่ลูกค้าสั่งซื้อ (Exact Coins):";
+
+        if (btnM && btnCoins) {
+          btnCoins.className = "py-2 px-3 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 btn-gold";
+          btnM.className = "py-2 px-3 rounded-lg font-semibold text-xs transition flex items-center justify-center gap-1.5 opacity-70 hover:opacity-100";
+        }
+        if (quickM) quickM.classList.add("hidden");
+        if (quickCoins) quickCoins.classList.remove("hidden");
+      } else {
+        const converted = +(currentVal / 1e6).toFixed(4);
+        input.value = converted > 0 ? converted : 10;
+        input.step = "any";
+        input.placeholder = "เช่น 10 หรือ 90";
+        if (unitLabel) unitLabel.textContent = "M";
+        if (inputLabel) inputLabel.textContent = "🎯 จำนวนเหรียญที่ลูกค้าสั่งซื้อ (หน่วย M):";
+
+        if (btnM && btnCoins) {
+          btnM.className = "py-2 px-3 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 btn-gold";
+          btnCoins.className = "py-2 px-3 rounded-lg font-semibold text-xs transition flex items-center justify-center gap-1.5 opacity-70 hover:opacity-100";
+        }
+        if (quickM) quickM.classList.remove("hidden");
+        if (quickCoins) quickCoins.classList.add("hidden");
+      }
+
+      playTone(550, 'sine', 0.05);
+      calculateTradeTax();
+    }
+
+    function addCoinsM(amount) {
+      const input = document.getElementById("tradeCoinsInput");
+      const current = parseFloat(input.value) || 0;
+      if (tradeInputMode === "COINS") {
+        input.value = Math.max(0, Math.round(current + (amount * 1e6)));
+      } else {
+        input.value = +(current + amount).toFixed(4);
+      }
+      playTone(450, 'sine', 0.03);
+      calculateTradeTax();
+    }
+
+    function addCoinsExact(amount) {
+      const input = document.getElementById("tradeCoinsInput");
+      const current = parseFloat(input.value) || 0;
+      input.value = Math.max(0, Math.round(current + amount));
+      playTone(450, 'sine', 0.03);
+      calculateTradeTax();
+    }
+
+    function setCoinsQuick(amount) {
+      const input = document.getElementById("tradeCoinsInput");
+      if (tradeInputMode === "COINS") {
+        input.value = amount * 1e6;
+      } else {
+        input.value = amount;
+      }
+      playTone(400, 'sine', 0.03);
+      calculateTradeTax();
+    }
+
+    function calculateTradeTax() {
+      const input = document.getElementById("tradeCoinsInput");
+      const rawVal = parseFloat(input.value) || 0;
+
+      let targetM = 0;
+      let targetCoins = 0;
+
+      if (tradeInputMode === "M") {
+        targetM = rawVal;
+        targetCoins = Math.round(targetM * 1e6);
+      } else {
+        targetCoins = Math.round(rawVal);
+        targetM = targetCoins / 1e6;
+      }
+
+      // Live Equivalent Preview
+      const previewEl = document.getElementById("tradeCoinsEquivalentPreview");
+      if (previewEl) {
+        if (tradeInputMode === "M") {
+          previewEl.innerHTML = `<span>= </span><b class="text-gold">${targetCoins.toLocaleString()}</b><span> Coins (${targetM} M)</span>`;
+        } else {
+          const cleanM = targetM.toFixed(4).replace(/\.?0+$/, "");
+          previewEl.innerHTML = `<span>= </span><b class="text-gold">${cleanM} M</b><span> (${targetCoins.toLocaleString()} Coins)</span>`;
+        }
+      }
+
+      let add2Transfer = 0, add2Tax = 0, add2Net = 0;
+      let exactTransfer = 0, exactTax = 0, exactNet = 0;
+
+      const f1Badge = document.getElementById("formula1Badge");
+      const f1Title = document.getElementById("formula1Title");
+      const f2Badge = document.getElementById("formula2Badge");
+      const f2Title = document.getElementById("formula2Title");
+      const f2NetLabel = document.getElementById("formula2NetLabel");
+
+      if (currentTaxMode === "seller") {
+        add2Transfer = Math.round(targetCoins * 1.02);
+        add2Tax = Math.round(add2Transfer * 0.02);
+        add2Net = add2Transfer - add2Tax;
+
+        exactTransfer = Math.ceil(targetCoins / 0.98);
+        exactTax = Math.round(exactTransfer * 0.02);
+        exactNet = exactTransfer - exactTax;
+
+        if (f1Badge) f1Badge.textContent = "POPULAR +2%";
+        if (f1Title) f1Title.textContent = "สูตรมาตรฐานพ่อค้า (+2% ตรงตัว เช่น 10M โอน 10.2M)";
+        if (f2Badge) f2Badge.textContent = "EXACT NET 100%";
+        if (f2Title) f2Title.textContent = "สูตรสุทธิเป๊ะ 100% (หาร 0.98 ลูกค้าได้ครบเป๊ะ)";
+        if (f2NetLabel) f2NetLabel.innerHTML = 'ลูกค้าได้รับเต็มเป๊ะ: <b class="text-gold" id="resultNetExactNet">' + exactNet.toLocaleString() + '</b>';
+      } else {
+        add2Transfer = targetCoins;
+        add2Tax = Math.round(targetCoins * 0.02);
+        add2Net = targetCoins - add2Tax;
+
+        exactTransfer = targetCoins;
+        exactTax = Math.round(targetCoins * 0.02);
+        exactNet = targetCoins - exactTax;
+
+        if (f1Badge) f1Badge.textContent = "BUYER PAYS TAX";
+        if (f1Title) f1Title.textContent = "โอนตามยอดสั่งซื้อตรงตัว (ลูกค้าออกภาษี 2% เองในเกม)";
+        if (f2Badge) f2Badge.textContent = "NET AFTER 2% TAX";
+        if (f2Title) f2Title.textContent = "ยอดสุทธิที่ลูกค้าได้รับจริงหลังหักภาษี 2% ในเกม";
+        if (f2NetLabel) f2NetLabel.innerHTML = 'ลูกค้าได้รับสุทธิ: <b class="text-gold" id="resultNetExactNet">' + exactNet.toLocaleString() + '</b>';
+      }
+
+      document.getElementById("resultAdd2Num").textContent = add2Transfer.toLocaleString();
+      document.getElementById("resultAdd2Tax").textContent = add2Tax.toLocaleString();
+      document.getElementById("resultAdd2Net").textContent = add2Net.toLocaleString();
+
+      document.getElementById("resultNetExactNum").textContent = exactTransfer.toLocaleString();
+      document.getElementById("resultNetExactTax").textContent = exactTax.toLocaleString();
+      const netNetEl = document.getElementById("resultNetExactNet");
+      if (netNetEl) netNetEl.textContent = exactNet.toLocaleString();
+
+      // Customer Bill
+      const priceVal = coinPriceConfig.value || 0;
+      const priceCur = coinPriceConfig.currency || "PHP";
+      const totalOrderPrice = targetM * priceVal;
+      const totalOrderTHB = toTHB(totalOrderPrice, priceCur);
+
+      document.getElementById("billRatePerMTag").textContent = `เรท ${priceVal} ${priceCur} / M`;
+      document.getElementById("billForeignAmount").textContent = `${totalOrderPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${priceCur}`;
+      document.getElementById("billThbAmount").textContent = `≈ ${totalOrderTHB.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาทไทย`;
+    }
+
+    function copyBillMessage() {
+      const input = document.getElementById("tradeCoinsInput");
+      const rawVal = parseFloat(input.value) || 0;
+      let targetMStr = "";
+      let targetCoinsStr = "";
+      if (tradeInputMode === "M") {
+        targetMStr = rawVal.toString();
+        targetCoinsStr = Math.round(rawVal * 1e6).toLocaleString();
+      } else {
+        targetMStr = (rawVal / 1e6).toFixed(4).replace(/\.?0+$/, "");
+        targetCoinsStr = Math.round(rawVal).toLocaleString();
+      }
+      const transferNum = document.getElementById("resultAdd2Num").textContent.trim();
+      const netNum = document.getElementById("resultAdd2Net").textContent.trim();
+      const foreignAmount = document.getElementById("billForeignAmount").textContent.trim();
+      const thbAmount = document.getElementById("billThbAmount").textContent.trim();
+      const taxNote = currentTaxMode === "seller"
+        ? "(รวมภาษี 2%)"
+        : `(ลูกค้าออกภาษี 2% เอง • รับสุทธิ ${netNum} Coins)`;
+
+      const text = `🐉 [ Dragon Adventures Coin Order ]\n` +
+                   `• จำนวนเหรียญ: ${targetCoinsStr} Coins (${targetMStr}M)\n` +
+                   `• ยอดโอนในเกม: ${transferNum} Coins ${taxNote}\n` +
+                   `• ยอดชำระ: ${foreignAmount} (${thbAmount})\n` +
+                   `ขอบคุณที่ใช้บริการครับ! ✨`;
+
+      writeClipboardText(text, "คัดลอกบิลภาษาไทยเรียบร้อยแล้ว พร้อมส่งให้ลูกค้า 📋");
+    }
+
+    function copyBillMessageEN() {
+      const input = document.getElementById("tradeCoinsInput");
+      const rawVal = parseFloat(input.value) || 0;
+      let targetMStr = "";
+      let targetCoinsStr = "";
+      if (tradeInputMode === "M") {
+        targetMStr = rawVal.toString();
+        targetCoinsStr = Math.round(rawVal * 1e6).toLocaleString();
+      } else {
+        targetMStr = (rawVal / 1e6).toFixed(4).replace(/\.?0+$/, "");
+        targetCoinsStr = Math.round(rawVal).toLocaleString();
+      }
+      const transferNum = document.getElementById("resultAdd2Num").textContent.trim();
+      const netNum = document.getElementById("resultAdd2Net").textContent.trim();
+      const foreignAmount = document.getElementById("billForeignAmount").textContent.trim();
+      const taxNote = currentTaxMode === "seller"
+        ? "(2% Tax Covered)"
+        : `(Buyer covers 2% tax • Net received: ${netNum} Coins)`;
+
+      const text = `🐉 **[ Dragon Adventures Coin Invoice ]**\n` +
+                   `• **Order Amount:** ${targetCoinsStr} Coins (${targetMStr}M)\n` +
+                   `• **In-Game Transfer:** ${transferNum} Coins ${taxNote}\n` +
+                   `• **Total Price:** ${foreignAmount}\n` +
+                   `Thank you for trading with us! ✨`;
+
+      writeClipboardText(text, "Copied English Invoice to clipboard! 🌐");
+    }
+
+    // ===== Live 2-Way Currency Converter =====
+    function convertCurrencyLive(direction) {
+      const fromEl = document.getElementById("convAmountFrom");
+      const toEl = document.getElementById("convAmountTo");
+      const fromCur = document.getElementById("convCurrencyFrom").value;
+      const toCur = document.getElementById("convCurrencyTo").value;
+
+      if (direction === 'from') {
+        const fromVal = parseFloat(fromEl.value) || 0;
+        const inTHB = toTHB(fromVal, fromCur);
+        const result = fromTHB(inTHB, toCur);
+        if (document.activeElement !== toEl) {
+          toEl.value = result.toFixed(2);
+        }
+      } else {
+        const toVal = parseFloat(toEl.value) || 0;
+        const inTHB = toTHB(toVal, toCur);
+        const result = fromTHB(inTHB, fromCur);
+        if (document.activeElement !== fromEl) {
+          fromEl.value = result.toFixed(2);
+        }
+      }
+
+      const oneUnitInTHB = toTHB(1, fromCur);
+      const oneUnitInToCur = fromTHB(oneUnitInTHB, toCur);
+      document.getElementById("convRateFormula").textContent = `1 ${fromCur} ≈ ${oneUnitInToCur.toFixed(3)} ${toCur}`;
+    }
+
+    function swapConverterCurrencies() {
+      const selFrom = document.getElementById("convCurrencyFrom");
+      const selTo = document.getElementById("convCurrencyTo");
+      const temp = selFrom.value;
+      selFrom.value = selTo.value;
+      selTo.value = temp;
+      convertCurrencyLive('from');
+      playTone(520, 'sine', 0.04);
+    }
+
+    // ===== Paste Handler to automatically strip commas =====
+    const tradeInputEl = document.getElementById("tradeCoinsInput");
+    if (tradeInputEl) {
+      tradeInputEl.addEventListener("paste", function(e) {
+        const pasteData = (e.clipboardData || window.clipboardData)?.getData('text');
+        if (pasteData) {
+          const cleaned = pasteData.replace(/,/g, '').trim();
+          if (!isNaN(cleaned) && cleaned !== '') {
+            e.preventDefault();
+            tradeInputEl.value = cleaned;
+            calculateTradeTax();
+          }
+        }
+      });
+    }
+
+    // ===== Initialization =====
+    initTheme();
+    updateSoundButtonUI();
+    checkSavedVaultAuth();
+    loadSavedPriceConfig();
+    fetchExchangeRates();
+    calculateTradeTax();
+    setInterval(fetchExchangeRates, 10 * 60 * 1000);
+  </script>
+</body>
+</html>
