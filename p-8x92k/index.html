@@ -233,7 +233,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="font-extrabold text-base sm:text-lg tracking-tight" style="color: var(--text-main);">
-                Dragon Adventures <span class="text-gold">2% Trade Tax</span>
+                Dragon Adventures <span class="text-gold" id="headerTaxTitle">2% Trade Tax</span>
               </h1>
               <span class="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-gold border border-amber-500/30">
                 🔒 Private 24/7
@@ -292,12 +292,12 @@
               <span class="w-8 h-8 rounded-xl btn-gold flex items-center justify-center text-sm">
                 <i class="fa-solid fa-calculator"></i>
               </span>
-              <h2 class="font-extrabold text-lg sm:text-xl" style="color: var(--text-main);">
+              <h2 id="deskMainTitle" class="font-extrabold text-lg sm:text-xl" style="color: var(--text-main);">
                 โต๊ะคำนวณภาษีเทรดมังกร 2% & ออกบิลลูกค้า
               </h2>
             </div>
             <p class="text-xs sm:text-sm mt-1" style="color: var(--text-muted);">
-              คำนวณยอดโอนในเกม Dragon Adventures ป้องกันขาดทุนจากภาษี 2% พร้อมออกบิลแชทได้ทันที
+              คำนวณยอดโอนในเกมและปรับ % ภาษีได้เอง ป้องกันขาดทุนพร้อมออกบิลแชทได้ทันที
             </p>
           </div>
 
@@ -391,6 +391,47 @@
               </div>
             </div>
 
+            <!-- Tax Rate Mode Switcher (2% Default vs Custom %) -->
+            <div class="surface-elevated p-4 rounded-xl space-y-2.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold flex items-center gap-1.5" style="color: var(--text-main);">
+                  <i class="fa-solid fa-percent text-gold"></i>
+                  <span>อัตราภาษีเทรด (Tax %):</span>
+                </span>
+                <span id="activeTaxRateBadge" class="px-2 py-0.5 rounded bg-amber-500/15 text-gold font-bold mono text-[11px]">2% (มาตรฐาน DA)</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl surface-subtle border" style="border-color: var(--border-subtle);">
+                <button type="button" id="taxRateModeDefaultBtn" onclick="setTaxRateMode('default')"
+                        class="py-1.5 px-2.5 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 btn-gold">
+                  <span>🐉 2% ปกติ</span>
+                </button>
+                <button type="button" id="taxRateModeCustomBtn" onclick="setTaxRateMode('custom')"
+                        class="py-1.5 px-2.5 rounded-lg font-semibold text-xs transition flex items-center justify-center gap-1.5 opacity-70 hover:opacity-100"
+                        style="color: var(--text-secondary);">
+                  <span>⚙️ ปรับ % เอง</span>
+                </button>
+              </div>
+
+              <!-- Custom Tax Input & Presets -->
+              <div id="customTaxRatePanel" class="hidden space-y-2 pt-1">
+                <div class="relative">
+                  <input type="number" id="customTaxPercentInput" value="2" step="0.1" min="0" max="99.9" oninput="onCustomTaxInput()"
+                         placeholder="ใส่ % เช่น 5, 10, 30"
+                         class="input-exec w-full pl-3.5 pr-12 py-2 rounded-lg font-extrabold text-base mono text-gold">
+                  <span class="absolute right-3.5 top-1/2 -translate-y-1/2 font-extrabold text-sm text-gold mono">%</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5 text-[11px] mono">
+                  <button type="button" onclick="setCustomTaxPreset(0)" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">0%</button>
+                  <button type="button" onclick="setCustomTaxPreset(2)" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">2%</button>
+                  <button type="button" onclick="setCustomTaxPreset(5)" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">5%</button>
+                  <button type="button" onclick="setCustomTaxPreset(10)" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">10%</button>
+                  <button type="button" onclick="setCustomTaxPreset(15)" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">15%</button>
+                  <button type="button" onclick="setCustomTaxPreset(30)" class="px-2 py-0.5 rounded surface-subtle hover:text-gold transition">30% (Roblox)</button>
+                </div>
+              </div>
+            </div>
+
             <!-- Price Config Setting Box -->
             <div class="surface-elevated p-4 rounded-xl space-y-2.5">
               <div class="flex items-center justify-between text-xs">
@@ -476,7 +517,7 @@
               </div>
 
               <div class="flex items-center gap-3 text-xs mono pt-2 border-t" style="border-color: var(--border-subtle); color: var(--text-muted);">
-                <span>หักภาษี 2%: <b class="text-rose-400" id="resultAdd2Tax">204,000</b></span>
+                <span>หักภาษี <span id="resultAdd2TaxPct">2</span>%: <b class="text-rose-400" id="resultAdd2Tax">204,000</b></span>
                 <span>•</span>
                 <span>ลูกค้าได้รับจริง: <b class="text-slate-300" id="resultAdd2Net">9,996,000</b></span>
               </div>
@@ -513,7 +554,7 @@
               </div>
 
               <div class="flex items-center gap-3 text-xs mono pt-2 border-t" style="border-color: var(--border-subtle); color: var(--text-muted);">
-                <span>หักภาษี 2%: <b class="text-rose-400" id="resultNetExactTax">204,082</b></span>
+                <span>หักภาษี <span id="resultNetExactTaxPct">2</span>%: <b class="text-rose-400" id="resultNetExactTax">204,082</b></span>
                 <span>•</span>
                 <span id="formula2NetLabel">ลูกค้าได้รับเต็มเป๊ะ: <b class="text-gold" id="resultNetExactNet">10,000,000</b></span>
               </div>
@@ -923,7 +964,89 @@
     // ===== Trade Calculator State & Logic =====
     let currentTaxMode = "seller"; // 'seller' or 'buyer'
     let tradeInputMode = "M"; // 'M' or 'COINS'
+    let taxRateMode = "default"; // 'default' (2%) or 'custom'
+    let customTaxPercent = 2;
     let coinPriceConfig = { value: 15, currency: "PHP" };
+
+    function getActiveTaxPercent() {
+      if (taxRateMode === "default") return 2;
+      const val = parseFloat(customTaxPercent);
+      if (isNaN(val) || val < 0) return 0;
+      return Math.min(99.9, val);
+    }
+
+    function formatPercentText(pct) {
+      return Number(pct.toFixed(2)).toString();
+    }
+
+    function loadSavedTaxConfig() {
+      try {
+        const savedMode = localStorage.getItem("da_tax_rate_mode");
+        const savedPct = localStorage.getItem("da_custom_tax_pct");
+        if (savedPct !== null && !isNaN(parseFloat(savedPct))) {
+          customTaxPercent = Math.min(99.9, Math.max(0, parseFloat(savedPct)));
+          const customInput = document.getElementById("customTaxPercentInput");
+          if (customInput) customInput.value = customTaxPercent;
+        }
+        if (savedMode === "custom") {
+          setTaxRateMode("custom", true);
+        }
+      } catch (e) {}
+    }
+
+    function setTaxRateMode(mode, silent = false) {
+      taxRateMode = mode;
+      localStorage.setItem("da_tax_rate_mode", mode);
+      const btnDef = document.getElementById("taxRateModeDefaultBtn");
+      const btnCust = document.getElementById("taxRateModeCustomBtn");
+      const panel = document.getElementById("customTaxRatePanel");
+
+      if (mode === "custom") {
+        if (btnCust && btnDef) {
+          btnCust.className = "py-1.5 px-2.5 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 btn-gold";
+          btnDef.className = "py-1.5 px-2.5 rounded-lg font-semibold text-xs transition flex items-center justify-center gap-1.5 opacity-70 hover:opacity-100";
+        }
+        if (panel) panel.classList.remove("hidden");
+        const customInput = document.getElementById("customTaxPercentInput");
+        if (customInput && !silent) setTimeout(() => customInput.focus(), 50);
+      } else {
+        if (btnDef && btnCust) {
+          btnDef.className = "py-1.5 px-2.5 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 btn-gold";
+          btnCust.className = "py-1.5 px-2.5 rounded-lg font-semibold text-xs transition flex items-center justify-center gap-1.5 opacity-70 hover:opacity-100";
+        }
+        if (panel) panel.classList.add("hidden");
+      }
+
+      if (!silent) {
+        playTone(500, 'sine', 0.05);
+        showToast(mode === "default" ? "ตั้งค่าอัตราภาษี 2% (มาตรฐาน DA)" : `เปิดโหมดกำหนดภาษีเอง (${formatPercentText(getActiveTaxPercent())}%)`);
+      }
+      calculateTradeTax();
+    }
+
+    function onCustomTaxInput() {
+      const input = document.getElementById("customTaxPercentInput");
+      let val = parseFloat(input.value);
+      if (isNaN(val) || val < 0) val = 0;
+      if (val > 99.9) {
+        val = 99.9;
+        input.value = 99.9;
+      }
+      customTaxPercent = val;
+      localStorage.setItem("da_custom_tax_pct", String(val));
+      calculateTradeTax();
+    }
+
+    function setCustomTaxPreset(pct) {
+      if (taxRateMode !== "custom") setTaxRateMode("custom", true);
+      const input = document.getElementById("customTaxPercentInput");
+      if (input) input.value = pct;
+      customTaxPercent = pct;
+      localStorage.setItem("da_custom_tax_pct", String(pct));
+      playTone(500, 'sine', 0.05);
+      showToast(`ตั้งค่าภาษีเทรดเป็น ${pct}% เรียบร้อยแล้ว`);
+      calculateTradeTax();
+    }
 
     function loadSavedPriceConfig() {
       try {
@@ -1074,6 +1197,21 @@
         }
       }
 
+      const taxPct = getActiveTaxPercent();
+      const taxStr = formatPercentText(taxPct);
+      const keepRatio = (100 - taxPct) / 100;
+      const keepRatioStr = Number(keepRatio.toFixed(4)).toString();
+      const exampleAddVal = Number((10 * (100 + taxPct) / 100).toFixed(4)).toString();
+
+      const activeBadge = document.getElementById("activeTaxRateBadge");
+      const headerTax = document.getElementById("headerTaxTitle");
+      const deskTitle = document.getElementById("deskMainTitle");
+      if (activeBadge) {
+        activeBadge.textContent = taxRateMode === "default" ? "2% (มาตรฐาน DA)" : `${taxStr}% (กำหนดเอง)`;
+      }
+      if (headerTax) headerTax.textContent = `${taxStr}% Trade Tax`;
+      if (deskTitle) deskTitle.textContent = `โต๊ะคำนวณภาษีเทรดมังกร ${taxStr}% & ออกบิลลูกค้า`;
+
       let add2Transfer = 0, add2Tax = 0, add2Net = 0;
       let exactTransfer = 0, exactTax = 0, exactNet = 0;
 
@@ -1082,34 +1220,40 @@
       const f2Badge = document.getElementById("formula2Badge");
       const f2Title = document.getElementById("formula2Title");
       const f2NetLabel = document.getElementById("formula2NetLabel");
+      const f1TaxPctEl = document.getElementById("resultAdd2TaxPct");
+      const f2TaxPctEl = document.getElementById("resultNetExactTaxPct");
+      if (f1TaxPctEl) f1TaxPctEl.textContent = taxStr;
+      if (f2TaxPctEl) f2TaxPctEl.textContent = taxStr;
 
       if (currentTaxMode === "seller") {
-        add2Transfer = Math.round(targetCoins * 1.02);
-        add2Tax = Math.round(add2Transfer * 0.02);
+        add2Transfer = Math.round(Number(((targetCoins * (100 + taxPct)) / 100).toFixed(6)));
+        add2Tax = Math.round(Number(((add2Transfer * taxPct) / 100).toFixed(6)));
         add2Net = add2Transfer - add2Tax;
 
-        exactTransfer = Math.ceil(targetCoins / 0.98);
-        exactTax = Math.round(exactTransfer * 0.02);
+        exactTransfer = keepRatio > 0
+          ? Math.ceil(Number(((targetCoins * 100) / (100 - taxPct)).toFixed(6)))
+          : targetCoins;
+        exactTax = Math.round(Number(((exactTransfer * taxPct) / 100).toFixed(6)));
         exactNet = exactTransfer - exactTax;
 
-        if (f1Badge) f1Badge.textContent = "POPULAR +2%";
-        if (f1Title) f1Title.textContent = "สูตรมาตรฐานพ่อค้า (+2% ตรงตัว เช่น 10M โอน 10.2M)";
+        if (f1Badge) f1Badge.textContent = `POPULAR +${taxStr}%`;
+        if (f1Title) f1Title.textContent = `สูตรมาตรฐานพ่อค้า (+${taxStr}% ตรงตัว เช่น 10M โอน ${exampleAddVal}M)`;
         if (f2Badge) f2Badge.textContent = "EXACT NET 100%";
-        if (f2Title) f2Title.textContent = "สูตรสุทธิเป๊ะ 100% (หาร 0.98 ลูกค้าได้ครบเป๊ะ)";
+        if (f2Title) f2Title.textContent = `สูตรสุทธิเป๊ะ 100% (หาร ${keepRatioStr} ลูกค้าได้ครบเป๊ะ)`;
         if (f2NetLabel) f2NetLabel.innerHTML = 'ลูกค้าได้รับเต็มเป๊ะ: <b class="text-gold" id="resultNetExactNet">' + exactNet.toLocaleString() + '</b>';
       } else {
         add2Transfer = targetCoins;
-        add2Tax = Math.round(targetCoins * 0.02);
+        add2Tax = Math.round(Number(((targetCoins * taxPct) / 100).toFixed(6)));
         add2Net = targetCoins - add2Tax;
 
         exactTransfer = targetCoins;
-        exactTax = Math.round(targetCoins * 0.02);
-        exactNet = targetCoins - exactTax;
+        exactTax = add2Tax;
+        exactNet = add2Net;
 
         if (f1Badge) f1Badge.textContent = "BUYER PAYS TAX";
-        if (f1Title) f1Title.textContent = "โอนตามยอดสั่งซื้อตรงตัว (ลูกค้าออกภาษี 2% เองในเกม)";
-        if (f2Badge) f2Badge.textContent = "NET AFTER 2% TAX";
-        if (f2Title) f2Title.textContent = "ยอดสุทธิที่ลูกค้าได้รับจริงหลังหักภาษี 2% ในเกม";
+        if (f1Title) f1Title.textContent = `โอนตามยอดสั่งซื้อตรงตัว (ลูกค้าออกภาษี ${taxStr}% เองในเกม)`;
+        if (f2Badge) f2Badge.textContent = `NET AFTER ${taxStr}% TAX`;
+        if (f2Title) f2Title.textContent = `ยอดสุทธิที่ลูกค้าได้รับจริงหลังหักภาษี ${taxStr}% ในเกม`;
         if (f2NetLabel) f2NetLabel.innerHTML = 'ลูกค้าได้รับสุทธิ: <b class="text-gold" id="resultNetExactNet">' + exactNet.toLocaleString() + '</b>';
       }
 
@@ -1149,9 +1293,10 @@
       const netNum = document.getElementById("resultAdd2Net").textContent.trim();
       const foreignAmount = document.getElementById("billForeignAmount").textContent.trim();
       const thbAmount = document.getElementById("billThbAmount").textContent.trim();
+      const taxStr = formatPercentText(getActiveTaxPercent());
       const taxNote = currentTaxMode === "seller"
-        ? "(รวมภาษี 2%)"
-        : `(ลูกค้าออกภาษี 2% เอง • รับสุทธิ ${netNum} Coins)`;
+        ? `(รวมภาษี ${taxStr}%)`
+        : `(ลูกค้าออกภาษี ${taxStr}% เอง • รับสุทธิ ${netNum} Coins)`;
 
       const text = `🐉 [ Dragon Adventures Coin Order ]\n` +
                    `• จำนวนเหรียญ: ${targetCoinsStr} Coins (${targetMStr}M)\n` +
@@ -1177,9 +1322,10 @@
       const transferNum = document.getElementById("resultAdd2Num").textContent.trim();
       const netNum = document.getElementById("resultAdd2Net").textContent.trim();
       const foreignAmount = document.getElementById("billForeignAmount").textContent.trim();
+      const taxStr = formatPercentText(getActiveTaxPercent());
       const taxNote = currentTaxMode === "seller"
-        ? "(2% Tax Covered)"
-        : `(Buyer covers 2% tax • Net received: ${netNum} Coins)`;
+        ? `(${taxStr}% Tax Covered)`
+        : `(Buyer covers ${taxStr}% tax • Net received: ${netNum} Coins)`;
 
       const text = `🐉 **[ Dragon Adventures Coin Invoice ]**\n` +
                    `• **Order Amount:** ${targetCoinsStr} Coins (${targetMStr}M)\n` +
@@ -1249,6 +1395,7 @@
     updateSoundButtonUI();
     checkSavedVaultAuth();
     loadSavedPriceConfig();
+    loadSavedTaxConfig();
     fetchExchangeRates();
     calculateTradeTax();
     setInterval(fetchExchangeRates, 10 * 60 * 1000);
